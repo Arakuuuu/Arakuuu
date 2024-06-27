@@ -1,0 +1,96 @@
+import urllib.parse
+import urllib.robotparser
+import tkinter as tk
+
+# Phishing Indicator Functions
+def check_subdomain(url):
+  """
+  Checks for presence of free email providers in subdomains.
+  """
+  parsed_url = urllib.parse.urlparse(url)
+  subdomains = parsed_url.netloc.split('.')
+  for subdomain in subdomains[:-2]:
+    if subdomain in ["gmail", "hotmail", "yahoo", "aol"]:
+      return True
+  return False
+
+def check_url_length(url):
+  """
+  Checks if URL length is excessively long.
+  """
+  return len(url) > 75
+
+def check_special_chars(url):
+  """
+  Checks for presence of uncommon characters in URL.
+  """
+  special_chars = "~#?+=&*%"
+  for char in special_chars:
+    if char in url:
+      return True
+  return False
+
+def check_https(url):
+  """
+  Checks if URL uses HTTPS protocol.
+  """
+  parsed_url = urllib.parse.urlparse(url)
+  return parsed_url.scheme == 'https'
+
+# Phishing Detection Algorithm
+def is_phishing(url):
+  """
+  Combines various checks for a basic phishing detection.
+  """
+  indicators = 0
+  if check_subdomain(url):
+    indicators += 1
+  if check_url_length(url):
+    indicators += 1
+  if check_special_chars(url):
+    indicators += 1
+  if not check_https(url):
+    indicators += 1
+  return indicators >= 2
+
+# User Interface Functions
+def get_url_input():
+  """
+  Retrieves user input for the URL.
+  """
+  return url_entry.get()
+
+def show_alert(message):
+  """
+  Displays an alert message to the user.
+  """
+  alert_label.config(text=message)
+
+# Main Application Loop
+def check_url():
+  """
+  Checks entered URL and displays alert.
+  """
+  url = get_url_input()
+  if is_phishing(url):
+    show_alert("WARNING: Potential Phishing Site!")
+  else:
+    show_alert("The URL seems legitimate.")
+
+# User Interface Setup
+window = tk.Tk()
+window.title("Phish Detector")
+
+url_label = tk.Label(window, text="Enter URL:")
+url_label.pack(pady=10)
+
+url_entry = tk.Entry(window)
+url_entry.pack(pady=5)
+
+check_button = tk.Button(window, text="Check URL", command=check_url)
+check_button.pack(pady=5)
+
+alert_label = tk.Label(window, text="")
+alert_label.pack(pady=10)
+
+window.mainloop()
