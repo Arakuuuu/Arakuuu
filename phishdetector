@@ -1,96 +1,97 @@
 import urllib.parse
-import urllib.robotparser
-import tkinter as tk
+import requests  # For external API calls (replace with actual API keys)
+from bs4 import BeautifulSoup  # For basic HTML parsing (optional)
 
-# Phishing Indicator Functions
-def check_subdomain(url):
+# Replace with your API keys
+VIRUSTOTAL_API_KEY = "YOUR_VIRUSTOTAL_API_KEY"  # Optional, for domain reputation
+
+# Suspicious subdomain patterns (add/remove as needed)
+SUSPICIOUS_SUBDOMAINS = [
+    "gmail", "hotmail", "yahoo", "aol",  # Free email providers
+    "login", "signin", "account",  # Common phishing subdomains
+    "[0-9a-zA-Z]{10,}"  # Long, random alphanumeric sequences
+]
+
+# Cloud service domains commonly used for phishing
+CLOUD_PHISHING_SERVICES = [
+    "trycloudflare.com", "freenom.com", "vertex.ai",  # Examples
+    "*.click", "*.tech", "*.xyz"  # Wildcards for common TLDs
+]
+
+
+def is_legitimate(url):
   """
-  Checks for presence of free email providers in subdomains.
+  Analyzes a URL and classifies it as legitimate or phishing based on various checks.
+
+  Args:
+      url (str): The URL to be analyzed.
+
+  Returns:
+      tuple: A tuple containing the classification (str) and explanation (str).
   """
+
+  explanation = ""
+
+  # Basic URL analysis
   parsed_url = urllib.parse.urlparse(url)
-  subdomains = parsed_url.netloc.split('.')
-  for subdomain in subdomains[:-2]:
-    if subdomain in ["gmail", "hotmail", "yahoo", "aol"]:
-      return True
-  return False
+  if len(url) > 75:
+    explanation += " - URL length is excessively long.\n"
 
-def check_url_length(url):
-  """
-  Checks if URL length is excessively long.
-  """
-  return len(url) > 75
-
-def check_special_chars(url):
-  """
-  Checks for presence of uncommon characters in URL.
-  """
+  # Special characters (consider adjusting based on your needs)
   special_chars = "~#?+=&*%"
-  for char in special_chars:
-    if char in url:
-      return True
-  return False
+  if any(char in url for char in special_chars):
+    explanation += " - URL contains uncommon special characters.\n"
 
-def check_https(url):
-  """
-  Checks if URL uses HTTPS protocol.
-  """
-  parsed_url = urllib.parse.urlparse(url)
-  return parsed_url.scheme == 'https'
+  # Protocol (HTTPS preferred)
+  if parsed_url.scheme != "https":
+    explanation += " - URL uses HTTP instead of HTTPS.\n"
 
-# Phishing Detection Algorithm
-def is_phishing(url):
-  """
-  Combines various checks for a basic phishing detection.
-  """
-  indicators = 0
-  if check_subdomain(url):
-    indicators += 1
-  if check_url_length(url):
-    indicators += 1
-  if check_special_chars(url):
-    indicators += 1
-  if not check_https(url):
-    indicators += 1
-  return indicators >= 2
+  # Subdomain analysis
+  subdomains = parsed_url.netloc.split(".")[:-1]
+  for subdomain in subdomains:
+    if any(pattern in subdomain for pattern in SUSPICIOUS_SUBDOMAINS):
+      explanation += f" - Suspicious subdomain found: '{subdomain}'.\n"
 
-# User Interface Functions
-def get_url_input():
-  """
-  Retrieves user input for the URL.
-  """
-  return url_entry.get()
+  # Domain reputation (optional, requires API key)
+  if VIRUSTOTAL_API_KEY:
+    try:
+      response = requests.get(f"https://www.virustotal.com/api/v3/domains/{parsed_url.netloc}", headers={"Authorization": f"Bearer {VIRUSTOTAL_API_KEY}"})
+      data = response.json()
+      if data.get("data", {}).get("attributes", {}).get("categories", [{}])[0].get("name") == "Suspicious":
+        explanation += " - Domain has a suspicious reputation (VirusTotal).\n"
+    except Exception:
+      pass  # Handle potential API errors gracefully
 
-def show_alert(message):
-  """
-  Displays an alert message to the user.
-  """
-  alert_label.config(text=message)
+  # Content analysis (optional, requires additional setup)
+  # if content_analysis_enabled:
+  #   try:
+  #     response = requests.get(url)
+  #     soup = BeautifulSoup(response.content, "html.parser")
+  #     # Check for phishing indicators in the content (e.g., forms, messages)
+  #   except Exception:
+  #     pass  # Handle potential errors
 
-# Main Application Loop
-def check_url():
-  """
-  Checks entered URL and displays alert.
-  """
-  url = get_url_input()
-  if is_phishing(url):
-    show_alert("WARNING: Potential Phishing Site!")
+  # Cloud service detection
+  for domain in CLOUD_PHISHING_SERVICES:
+    if parsed_url.netloc.endswith(domain) or parsed_url.netloc.startswith(f"{domain}."):
+      explanation += f" - URL hosted on a cloud service commonly used for phishing: '{domain}'.\n"
+
+  # Classification and explanation
+  if explanation:
+    return "Phishing", explanation.strip()
   else:
-    show_alert("The URL seems legitimate.")
+    return "Legitimate", "No suspicious indicators found."
 
-# User Interface Setup
-window = tk.Tk()
-window.title("Phish Detector")
 
-url_label = tk.Label(window, text="Enter URL:")
-url_label.pack(pady=10)
+def main():
+  """
+  Prompts the user for a URL and prints the classification with explanation.
+  """
+  url = input("Enter a URL: ")
+  classification, explanation = is_legitimate(url)
+  print(f"\nClassification: {classification}")
+  print(f"Explanation:\n{explanation}")
 
-url_entry = tk.Entry(window)
-url_entry.pack(pady=5)
 
-check_button = tk.Button(window, text="Check URL", command=check_url)
-check_button.pack(pady=5)
-
-alert_label = tk.Label(window, text="")
-alert_label.pack(pady=10)
-
-window.mainloop()
+if __name__ == "__main__":
+  main()
