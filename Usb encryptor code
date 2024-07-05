@@ -1,0 +1,32 @@
+from cryptography.fernet import Fernet
+from tkinter import messagebox, simpledialog, Tk
+
+# Generate a key for encryption and decryption
+key = Fernet.generate_key()
+cipher = Fernet(key)
+
+# Encrypt the message
+message = "Akaruu passed by here to find the passkey Worship the king"
+encrypted_message = cipher.encrypt(message.encode())
+
+# Write the encrypted message to a file
+with open("message.txt", "wb") as file:
+    file.write(encrypted_message)
+
+# Main function to decrypt the message and show the window
+def decrypt_message():
+    key_input = simpledialog.askstring("Enter Passkey", "Please enter the passkey:")
+    try:
+        decrypted_message = cipher.decrypt(encrypted_message).decode()
+        if key_input == "Worship the king":
+            messagebox.showinfo("Message", decrypted_message)
+        else:
+            messagebox.showinfo("Incorrect Passkey", "Unauthorized access. Worship the king.")
+    except:
+        messagebox.showerror("Error", "Something went wrong.")
+
+# Create a root window and run the program
+root = Tk()
+root.withdraw()
+decrypt_message()
+root.mainloop()
