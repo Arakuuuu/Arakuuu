@@ -1,0 +1,8 @@
+import shutil
+
+# Define the source and destination directories
+source_dir = "C:/Users/username/Documents"
+dest_dir = "F:/"
+
+# Copy all files from the source directory to the destination directory
+shutil.copytree(source_dir, dest_dir)
